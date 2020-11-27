@@ -1,0 +1,75 @@
+
+;; Towards a Scheme Interpreter for the Lambda Calculus -- Part 1: Syntax
+
+;; 5 points
+
+;; Due December 1, and pre-requisite for all subsequent parts of the project
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; All programming is to be carried out using the pure functional sublanguage of R5RS Scheme.
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; You might want to have a look at http://www.cs.unc.edu/~stotts/723/Lambda/overview.html
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; 1. The lambda calculus is a particularly simple programming language consisting only of
+;; variable references, lambda expressions with a single formal parameter, and function
+;; applications.  A BNF definition of lambda calculus expressions is
+
+;; <expr> ::= <variable> | (lambda ( <variable> ) <expr> )  |  ( <expr> <expr> )
+
+;; Design a data type for the lambda calculus, with constructors, selectors, and classifiers.
+
+;; For concrete representation, use Scheme, as follows:  an identifier should be represented as
+;; a quoted Scheme variable, a lambda expression (lambda (x) E) as the quoted 3-element list
+;; '(lambda (x) [list representing E]), and an application  (E1 E2) as the quoted 2-element list
+;; '([list representing E1]  [list representing E2])
+
+
+;; 2.  In (lambda (<variable>) <expr>), we say that <variable> is a binder that
+;; binds all occurrences of that variable in the body, <expr>, unless some intervening
+;; binder of the same variable occurs. Thus in (lambda (x) (x (lambda (x) x))),
+;; the first occurrence of x binds the second occurrence of x, but not
+;; the fourth.  The third occurrence of x binds the fourth occurrence of x.
+
+;; A variable x occurs free in an expression E if there is some occurrence of x which is not
+;; bound by any binder of x in E.  A variable x occurs bound in an expression E if it is
+;; not free in E.  Thus x occurs free in (lambda (y) x), bound in (lambda (x) x), and both
+;; free and bound in (lambda (y) (x (lambda (x) x))).
+
+;; As a consequence of this definition, we can say that a variable x occurs free in a
+;; lambda calculus expression E iff one of the following holds:
+
+;;   (i) E = x
+;;   (ii) E = (lambda (y) E'), where x is distinct from y and x occurs free in E'
+;;   (iii) E = (E' E'') and x occurs free in E' or x occurs free in E''
+
+;; Observe that this is an inductive definition, exploiting the structure of lambda calculus
+;; expressions.
+
+;; Similarly, a variable x occurs bound in a lambda calculus expression E iff one of the
+;; following holds:
+
+;;   (i) E = (lambda (x) E') and x occurs free in E'
+;;   (ii) E = (lambda (y) E'), and x occurs bound in E': here, y may be x, or distinct from x
+;;   (iii) E = (E1 E2) and x occurs bound in either E1 or E2
+
+;; Develop and prove correct a procedure free-vars that inputs a list representing a lambda calculus
+;; expression E and outputs a list without repetitions (that is, a set) of the variables occurring
+;; free in E.
+
+;; Develop and prove correct a procedure bound-vars that inputs a list representing a lambda calculus
+;; expression E and outputs the set of variables which occur bound in E.
+
+
+;; 3.  Define a function all-ids which returns the set of all symbols -- free or bound variables,
+;; as well as the lambda identifiers for which there are no bound occurrences -- which occur in
+;; a lambda calculus expression E.  
+
+
+
+
+
