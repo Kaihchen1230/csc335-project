@@ -135,14 +135,32 @@ test-make-expr
 
 ; CODE
 
+; helper function
+
+(define (remove-duplicates l)
+        (define (helper lst element-so-far)
+          (cond ((null? lst) element-so-far)
+                ((member (car lst) (cdr lst)) (helper (cdr lst) element-so-far))
+                (else (helper (cdr lst) (append element-so-far (list (car lst)))))
+                )
+          )
+  (helper l `())
+  )
+"remove-duplicates `(a b a b c)"
+(remove-duplicates `(a b a b c))
+
 ; main function
 (define (free-vars E)
   (define (helper expr args vars-so-far)
 
     (cond ((null? expr) vars-so-far)
+          ;((and (variable? expr) (not (member expr args)))
+          ; (append (list expr) vars-so-far)
           ((variable? expr)
-           (cond ((and (not (member expr args)) (not (member expr vars-so-far))) (append (list expr) vars-so-far))
+           (cond ((not (member expr args)) (append (list expr) vars-so-far))
                  (else vars-so-far))
+           ;(cond ((and (not (member expr args)) (not (member expr vars-so-far))) (append (list expr) vars-so-far))
+                 ;(else vars-so-far))
            )
           ((lambda-symbol? expr)
            (helper (lambda-body expr) (append (lambda-variable expr) args) vars-so-far)
@@ -151,10 +169,8 @@ test-make-expr
            (helper (expr-1 expr) args (append (helper (expr-2 expr) args vars-so-far) vars-so-far)))
           )
     )
-  (helper E `() `())
+  (remove-duplicates(helper E `() `()))
   )
-
-(free-vars `())
 
 ; TEST
 "test cases for free-vars"
@@ -179,6 +195,18 @@ test-make-expr
 "input: (make-lambda `a (make-expr `b (make-lambda `c `b)))"
 (free-vars (make-lambda `a (make-expr `b (make-lambda `c `b))))
 
+; test cases given by professor
+"professor test case 1 for free vars:"
+(define lambda-exp1 '((lambda (x) (x (lambda (y) (lambda (x) (z (y x))))))
+(lambda (u) (x y))))
+lambda-exp1
+(free-vars lambda-exp1)
+"professor test case 2 for free vars:"
+(define lambda-exp2 '(lambda (x) (x (lambda (y) (((lambda (u) (x y))(lambda (x) (z (y x))))
+(lambda (w) (x y)))))))
+lambda-exp2
+(free-vars lambda-exp2)
+
 ; GUESS-INVATIANT TEST/PROOF
 ;
 ; Guess-invariant:
@@ -197,6 +225,80 @@ test-make-expr
 
 ;; Develop and prove correct a procedure bound-vars that inputs a list representing a lambda calculus
 ;; expression E and outputs the set of variables which occur bound in E.
+
+; ITERATIVE
+
+; SPEC
+
+; CODE
+
+; main funciton
+
+(define (bounded-vars E)
+  (define (helper expr args vars-so-far)
+
+    (cond ((null? expr) vars-so-far)
+          ((variable? expr)
+           (cond ((member expr args) (append (list expr) vars-so-far))
+           ;(cond ((and (member expr args) (not (member expr vars-so-far))) (append (list expr) vars-so-far))
+                 (else vars-so-far))
+           )
+          ((lambda-symbol? expr)
+           (helper (lambda-body expr) (append (lambda-variable expr) args) vars-so-far)
+           )
+          ((lambda-body? expr)
+           (helper (expr-1 expr) args (append (helper (expr-2 expr) args vars-so-far) vars-so-far)))
+          )
+    )
+  (remove-duplicates(helper E `() `()))
+  )
+
+; TEST
+
+"test cases for bounded-vars"
+"input: `()"
+(bounded-vars `())
+"input: (make-lambda `y `x)"
+(bounded-vars (make-lambda `y `x))
+"input: (make-lambda `y `y)"
+(bounded-vars (make-lambda `y `y))
+"input: (make-lambda `y (make-lambda `x `y))"
+(bounded-vars (make-lambda `y (make-lambda `x `y)))
+"input: (make-lambda `y (make-lambda `x `x))"
+(bounded-vars (make-lambda `y (make-lambda `x `x)))
+"input: (make-lambda `y (make-lambda `x `z))"
+(bounded-vars (make-lambda `y (make-lambda `x `z)))
+"input: (make-lambda `y (make-expr `x `z))"
+(bounded-vars (make-lambda `y (make-expr `x `z)))
+"input: (make-lambda `a (make-expr `b (make-lambda `b `c)))"
+(bounded-vars (make-lambda `a (make-expr `b (make-lambda `b `c))))
+"input: (make-lambda `a (make-expr `a (make-lambda `b `a)))"
+(bounded-vars (make-lambda `a (make-expr `a (make-lambda `b `a))))
+"input: (make-lambda `a (make-expr `b (make-lambda `c `b)))"
+(bounded-vars (make-lambda `a (make-expr `b (make-lambda `c `b))))
+
+; test cases given by professor
+"professor test case 1 for bounded vars:"
+lambda-exp1
+(bounded-vars lambda-exp1)
+"professor test case 2 for bounded vars:"
+lambda-exp2
+(bounded-vars lambda-exp2)
+
+
+; GUESS-INVATIANT TEST/PROOF
+;
+; Guess-invariant:
+;
+; Strong-enough?:
+;
+; Weak-enough?:
+;
+; Preserved?
+; Current call:
+; Next call:
+;
+; Termination:
 
 
 ;; 3.  Define a function all-ids which returns the set of all symbols -- free or bound variables,
