@@ -154,13 +154,9 @@ test-make-expr
   (define (helper expr args vars-so-far)
 
     (cond ((null? expr) vars-so-far)
-          ;((and (variable? expr) (not (member expr args)))
-          ; (append (list expr) vars-so-far)
           ((variable? expr)
            (cond ((not (member expr args)) (append (list expr) vars-so-far))
                  (else vars-so-far))
-           ;(cond ((and (not (member expr args)) (not (member expr vars-so-far))) (append (list expr) vars-so-far))
-                 ;(else vars-so-far))
            )
           ((lambda-symbol? expr)
            (helper (lambda-body expr) (append (lambda-variable expr) args) vars-so-far)
@@ -229,6 +225,8 @@ lambda-exp2
 ; ITERATIVE
 
 ; SPEC
+;   pre: E -> a list representing a lambda calclus expression. ex: (lambda (y) x) or (lambda (x) (x (lambda (x) x)))
+;   post: result -> a list of unique free variables from the input E
 
 ; CODE
 
@@ -240,12 +238,13 @@ lambda-exp2
     (cond ((null? expr) vars-so-far)
           ((variable? expr)
            (cond ((member expr args) (append (list expr) vars-so-far))
-           ;(cond ((and (member expr args) (not (member expr vars-so-far))) (append (list expr) vars-so-far))
                  (else vars-so-far))
            )
+          ; this is checking E = lambda (x) (E)
           ((lambda-symbol? expr)
            (helper (lambda-body expr) (append (lambda-variable expr) args) vars-so-far)
            )
+          ; this is checking E = (E` E``)
           ((lambda-body? expr)
            (helper (expr-1 expr) args (append (helper (expr-2 expr) args vars-so-far) vars-so-far)))
           )
@@ -305,5 +304,75 @@ lambda-exp2
 ;; as well as the lambda identifiers for which there are no bound occurrences -- which occur in
 ;; a lambda calculus expression E.  
 
+; ITERATIVE
 
+; SPEC
+
+; CODE
+
+; main funciton
+
+(define (all-ids E)
+  (define (helper expr id-so-far)
+    (cond ((null? expr) id-so-far)
+          ((variable? expr) (append (list expr) id-so-far))
+          ((lambda-symbol? expr)
+           (helper (lambda-body expr) (append (lambda-variable expr) id-so-far))
+           )
+          ; this is checking E = (E` E``)
+          ((lambda-body? expr)
+           (helper (expr-1 expr) (append (helper (expr-2 expr) id-so-far) id-so-far)))
+          )
+    )
+
+  (remove-duplicates(helper E `()))
+  )
+
+; TEST
+"test cases for all-ids"
+"input: `()"
+(all-ids `())
+"input: (make-lambda `y `x)"
+(all-ids (make-lambda `y `x))
+"input: (make-lambda `y `y)"
+(all-ids (make-lambda `y `y))
+"input: (make-lambda `y (make-lambda `x `y))"
+(all-ids (make-lambda `y (make-lambda `x `y)))
+"input: (make-lambda `y (make-lambda `x `x))"
+(all-ids (make-lambda `y (make-lambda `x `x)))
+"input: (make-lambda `y (make-lambda `x `z))"
+(all-ids (make-lambda `y (make-lambda `x `z)))
+"input: (make-lambda `y (make-expr `x `z))"
+(all-ids (make-lambda `y (make-expr `x `z)))
+"input: (make-lambda `a (make-expr `b (make-lambda `b `c)))"
+(all-ids (make-lambda `a (make-expr `b (make-lambda `b `c))))
+"input: (make-lambda `a (make-expr `a (make-lambda `b `a)))"
+(all-ids (make-lambda `a (make-expr `a (make-lambda `b `a))))
+"input: (make-lambda `a (make-expr `b (make-lambda `c `b)))"
+(all-ids (make-lambda `a (make-expr `b (make-lambda `c `b))))
+
+; test cases given by professor
+"professor test case 1 for all-ids:"
+lambda-exp1
+(all-ids lambda-exp1)
+"professor test case 2 for all-ids:"
+lambda-exp2
+(all-ids lambda-exp2)
+
+; test cases given by professor
+
+
+; GUESS-INVATIANT TEST/PROOF
+;
+; Guess-invariant:
+;
+; Strong-enough?:
+;
+; Weak-enough?:
+;
+; Preserved?
+; Current call:
+; Next call:
+;
+; Termination:
 
