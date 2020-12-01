@@ -75,7 +75,8 @@ test-make-expr
   (cadr expr))
 
 ;test case
-(expr-1 test-make-expr)
+"selector -> lambda-body for test-lambda-ex1 = (lambda (x) a)"
+(lambda-body test-lambda-ex1)
 
 ; classifiers
 (define (variable? expr)
@@ -87,11 +88,12 @@ test-make-expr
   )
 
 (define (lambda-body? expr)
-  (or (list? expr) (not (equal? (lambda-symbol expr) `lambda)))
+  (and (list? expr) (not (equal? (lambda-symbol expr) `lambda)))
   )
 
 ; test case
-(lambda-body? test-expr-ex1)
+"clasifiers -> lambda-symbol? for test-lambda-ex1 = (lambda (x) a)"
+(lambda-symbol? test-lambda-ex1)
 
 
 
@@ -137,17 +139,67 @@ test-make-expr
 
 ; helper function
 
+; SPEC for remove-duplicates
+;   pre: l -> a list
+;   post: result -> a list of unique elements from the input l
+
 (define (remove-duplicates l)
         (define (helper lst element-so-far)
           (cond ((null? lst) element-so-far)
-                ((member (car lst) (cdr lst)) (helper (cdr lst) element-so-far))
+                ((member (car lst) element-so-far) (helper (cdr lst) element-so-far))
+                ;((member (car lst) (cdr lst)) (helper (cdr lst) element-so-far))
                 (else (helper (cdr lst) (append element-so-far (list (car lst)))))
                 )
           )
   (helper l `())
   )
+
+; TEST
 "remove-duplicates `(a b a b c)"
-(remove-duplicates `(a b a b c))
+(remove-duplicates `(a `() b a b c))
+
+; GUESS-INVATIANT TEST/PROOF for remove-duplicates
+;
+; Guess-invariant: lst-all-unique-elements = (car lst) + lst-result + remove-duplicates(lst-remaining) if (car lst) not in lst-result
+;                  in the program: lst-result = element-so-far
+;
+; Strong-enough?:
+; When the program halts, we reaches to the end of the l -> `(), meaning the program went throught all the elements in l
+; and add all the unique elements to the lst-result.
+; GI: lst-all-unique-elements = (car lst) + lst-result + remove-duplicates(lst-remaining) if (car lst) not in lst-result
+; ->
+; lst-all-unique-elements = (car lst) + lst-result + remove-duplicates(None), since every list in scheme ended with `(), so `() won't be added to lst-result
+; -> lst-all-unique-elements = lst-result
+;
+; Weak-enough?:
+; In the first call we make to helper, the element-so-far = `() -> an empty list
+; and list-remaining is still l, the program hasn't processed any element yet. So, (car lst) is nothing, because the project hasn't started yet.
+; GI: lst-all-unique-elements = (car lst) + lst-result + remove-duplicates(lst-remaining) if (car lst) not in lst-result
+; ->
+; lst-all-unique-elements = None + `() + remove-duplicates(lst-remaining)
+; lst-all-unique-elements = remove-duplicates(lst-remaining)
+; = remove-duplicates(lst-remaining)
+;
+; Preserved?
+; Current call: Assume that the current call works, such that it works for the k elements in the input l
+;               and lst-result stored all unique elements within the k elements.
+; Next call: In the next call, we already have all the unique elements within the k elements of l from the last call (Current call). Now, we take
+;            the next element through (car l) in the input l and check
+;            1) if it is in the lst-result, then nothing will be added to the lst-result.
+;            Then we take the last element in the input l, since the last element of every list is `(), so the lst-result is the all unique elements in the input l;
+;            GI: lst-all-unique-elements =  (car lst) + lst-result + remove-duplicates(lst-remaining) if (car lst) not in lst-result
+;            ->
+;            lst-all-unique-elements =  None + lst-result + remove-duplicates(`()) since current element already existed in lst-result
+;             ->  lst-all-unique-elements = lst-result
+;
+;           2) if it is not in the lst-result, then the it will be added to the lst-result
+;           Then we take the last element in the input l, since the last element of every list is `(), so the lst-result is the all unique elements in the input l;
+;           GI: lst-all-unique-elements =  (car lst) + lst-result + remove-duplicates(lst-remaining) if (car lst) not in lst-result
+;           ->
+;           lst-all-unique-elements = (car lst) + lst-result + remove-duplicates(`()) since current element doesn't existed in lst-result
+;           ->  lst-all-unique-elements = lst-result
+;
+; Termination:
 
 ; main function
 (define (free-vars E)
@@ -168,29 +220,8 @@ test-make-expr
   (remove-duplicates(helper E `() `()))
   )
 
-; TEST
-"test cases for free-vars"
-"input: `()"
-(free-vars `())
-"input: (make-lambda `y `x)"
-(free-vars (make-lambda `y `x))
-"input: (make-lambda `y `y)"
-(free-vars (make-lambda `y `y))
-"input: (make-lambda `y (make-lambda `x `y))"
-(free-vars (make-lambda `y (make-lambda `x `y)))
-"input: (make-lambda `y (make-lambda `x `x))"
-(free-vars (make-lambda `y (make-lambda `x `x)))
-"input: (make-lambda `y (make-lambda `x `z))"
-(free-vars (make-lambda `y (make-lambda `x `z)))
-"input: (make-lambda `y (make-expr `x `z))"
-(free-vars (make-lambda `y (make-expr `x `z)))
-"input: (make-lambda `a (make-expr `b (make-lambda `b `c)))"
-(free-vars (make-lambda `a (make-expr `b (make-lambda `b `c))))
-"input: (make-lambda `a (make-expr `a (make-lambda `b `a)))"
-(free-vars (make-lambda `a (make-expr `a (make-lambda `b `a))))
-"input: (make-lambda `a (make-expr `b (make-lambda `c `b)))"
-(free-vars (make-lambda `a (make-expr `b (make-lambda `c `b))))
 
+; TEST
 ; test cases given by professor
 "professor test case 1 for free vars:"
 (define lambda-exp1 '((lambda (x) (x (lambda (y) (lambda (x) (z (y x))))))
@@ -226,7 +257,7 @@ lambda-exp2
 
 ; SPEC
 ;   pre: E -> a list representing a lambda calclus expression. ex: (lambda (y) x) or (lambda (x) (x (lambda (x) x)))
-;   post: result -> a list of unique free variables from the input E
+;   post: result -> a list of unique bounded variables from the input E. ex: (x)
 
 ; CODE
 
@@ -253,29 +284,6 @@ lambda-exp2
   )
 
 ; TEST
-
-"test cases for bounded-vars"
-"input: `()"
-(bounded-vars `())
-"input: (make-lambda `y `x)"
-(bounded-vars (make-lambda `y `x))
-"input: (make-lambda `y `y)"
-(bounded-vars (make-lambda `y `y))
-"input: (make-lambda `y (make-lambda `x `y))"
-(bounded-vars (make-lambda `y (make-lambda `x `y)))
-"input: (make-lambda `y (make-lambda `x `x))"
-(bounded-vars (make-lambda `y (make-lambda `x `x)))
-"input: (make-lambda `y (make-lambda `x `z))"
-(bounded-vars (make-lambda `y (make-lambda `x `z)))
-"input: (make-lambda `y (make-expr `x `z))"
-(bounded-vars (make-lambda `y (make-expr `x `z)))
-"input: (make-lambda `a (make-expr `b (make-lambda `b `c)))"
-(bounded-vars (make-lambda `a (make-expr `b (make-lambda `b `c))))
-"input: (make-lambda `a (make-expr `a (make-lambda `b `a)))"
-(bounded-vars (make-lambda `a (make-expr `a (make-lambda `b `a))))
-"input: (make-lambda `a (make-expr `b (make-lambda `c `b)))"
-(bounded-vars (make-lambda `a (make-expr `b (make-lambda `c `b))))
-
 ; test cases given by professor
 "professor test case 1 for bounded vars:"
 lambda-exp1
@@ -307,6 +315,8 @@ lambda-exp2
 ; ITERATIVE
 
 ; SPEC
+;   pre: E -> a list representing a lambda calclus expression. ex: (lambda (y) x) or (lambda (x) (x (lambda (x) x)))
+;   post: result -> a list of unique free variables, bounded variables and lambda identifiers from the input E
 
 ; CODE
 
@@ -315,13 +325,13 @@ lambda-exp2
 (define (all-ids E)
   (define (helper expr id-so-far)
     (cond ((null? expr) id-so-far)
-          ((variable? expr) (append (list expr) id-so-far))
+          ((variable? expr) (append id-so-far (list expr)))
           ((lambda-symbol? expr)
-           (helper (lambda-body expr) (append (lambda-variable expr) id-so-far))
+           (helper (lambda-body expr) (append id-so-far (lambda-variable expr)))
            )
           ; this is checking E = (E` E``)
           ((lambda-body? expr)
-           (helper (expr-1 expr) (append (helper (expr-2 expr) id-so-far) id-so-far)))
+           (helper (expr-1 expr) (append id-so-far (helper (expr-2 expr) id-so-far))))
           )
     )
 
@@ -329,27 +339,6 @@ lambda-exp2
   )
 
 ; TEST
-"test cases for all-ids"
-"input: `()"
-(all-ids `())
-"input: (make-lambda `y `x)"
-(all-ids (make-lambda `y `x))
-"input: (make-lambda `y `y)"
-(all-ids (make-lambda `y `y))
-"input: (make-lambda `y (make-lambda `x `y))"
-(all-ids (make-lambda `y (make-lambda `x `y)))
-"input: (make-lambda `y (make-lambda `x `x))"
-(all-ids (make-lambda `y (make-lambda `x `x)))
-"input: (make-lambda `y (make-lambda `x `z))"
-(all-ids (make-lambda `y (make-lambda `x `z)))
-"input: (make-lambda `y (make-expr `x `z))"
-(all-ids (make-lambda `y (make-expr `x `z)))
-"input: (make-lambda `a (make-expr `b (make-lambda `b `c)))"
-(all-ids (make-lambda `a (make-expr `b (make-lambda `b `c))))
-"input: (make-lambda `a (make-expr `a (make-lambda `b `a)))"
-(all-ids (make-lambda `a (make-expr `a (make-lambda `b `a))))
-"input: (make-lambda `a (make-expr `b (make-lambda `c `b)))"
-(all-ids (make-lambda `a (make-expr `b (make-lambda `c `b))))
 
 ; test cases given by professor
 "professor test case 1 for all-ids:"
@@ -358,8 +347,6 @@ lambda-exp1
 "professor test case 2 for all-ids:"
 lambda-exp2
 (all-ids lambda-exp2)
-
-; test cases given by professor
 
 
 ; GUESS-INVATIANT TEST/PROOF
