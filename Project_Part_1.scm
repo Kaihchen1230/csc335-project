@@ -132,7 +132,7 @@ test-make-expr
 ; ITERATIVE
 
 ; SPEC
-;   pre: E -> a list representing a lambda calclus expression. ex: (lambda (y) x) or (lambda (x) (x (lambda (x) x)))
+;   pre: E -> a list representing a lambda calclus expression based on the BNF definition from question 1. ex: (lambda (y) x) or (lambda (x) (x (lambda (x) x)))
 ;   post: result -> a list of unique free variables from the input E
 
 ; CODE
@@ -161,6 +161,7 @@ test-make-expr
 ; GUESS-INVATIANT TEST/PROOF for remove-duplicates
 ;
 ; Guess-invariant: lst-all-unique-elements = (car lst) + lst-result + remove-duplicates(lst-remaining) if (car lst) not in lst-result
+;
 ;                  in the program: lst-result = element-so-far
 ;
 ; Strong-enough?:
@@ -173,7 +174,7 @@ test-make-expr
 ;
 ; Weak-enough?:
 ; In the first call we make to helper, the element-so-far = `() -> an empty list
-; and list-remaining is still l, the program hasn't processed any element yet. So, (car lst) is nothing, because the project hasn't started yet.
+; and list-remaining is still l, the program hasn't processed any element yet. So, (car lst) is nothing, because the program hasn't started yet.
 ; GI: lst-all-unique-elements = (car lst) + lst-result + remove-duplicates(lst-remaining) if (car lst) not in lst-result
 ; ->
 ; lst-all-unique-elements = None + `() + remove-duplicates(lst-remaining)
@@ -199,9 +200,10 @@ test-make-expr
 ;           lst-all-unique-elements = (car lst) + lst-result + remove-duplicates(`()) since current element doesn't existed in lst-result
 ;           ->  lst-all-unique-elements = lst-result
 ;
-; Termination:
-
-; main function
+; Termination: According to the code, the program halts when the input l is empty, that is l = `(). As each call to helper function, the amount of elements
+;              in l decease by 1. Eventually, l would be `(). Therefore, assuming the pre-condition holds, the program must eventually terminate.
+;
+; main function for free-vars
 (define (free-vars E)
   (define (helper expr args vars-so-far)
 
@@ -213,6 +215,7 @@ test-make-expr
           ((lambda-symbol? expr)
            (helper (lambda-body expr) (append (lambda-variable expr) args) vars-so-far)
            )
+          ; check for (E` E``)
           ((lambda-body? expr)
            (helper (expr-1 expr) args (append (helper (expr-2 expr) args vars-so-far) vars-so-far)))
           )
@@ -236,14 +239,33 @@ lambda-exp2
 
 ; GUESS-INVATIANT TEST/PROOF
 ;
-; Guess-invariant:
+; Guess-invariant: lst-all-free-vars = lst-result + free-vars(body-of-E)
+;                  where lst-result = lst-result + E, if E is a variable and E is not defined in the parameters
+;                  in the program, lst-result is element-so-far and I am also using args to store the list of occuring parameters in E
 ;
 ; Strong-enough?:
+; When the program halts, the program reaches to the last variable in the input E,
+; then the program checks if last variable is not part of the parameters. If it is, then add to the lst-result, otherwise it won't be added to lst-result.
+; GI: lst-all-free-vars = lst-result + free-vars(body-of-E)
+;      where lst-result = lst-result + E, if E is a variable and E is not defined in the parameters
+; 1) if E is not part of the parameters:
+;    -> GI: lst-all-free-vars = E + lst-result + free-vars(None)
+;       ->  lst-all-free-vars = lst-result
+; 2) if E is part of the parameters:
+;    -> GI: lst-all-free-vars = lst-result + free-vars(None)
+;       ->  lst-all-free-vars = lst-result
 ;
 ; Weak-enough?:
+; In the first call the program make to the helper function, the element-so-far = `() -> an empty list, the parameters = `()
+; and body of E is still E.
+; GI: lst-all-free-vars = lst-result + free-vars(body of E)
+;      where lst-result = lst-result + E, if E is a variable and E is not defined in the parameters
+; -> lst-all-free-vars = `() + free-vars(E)
+; -> lst-all-free-vars = free-vars(E)
 ;
 ; Preserved?
-; Current call:
+; Current call: Assume that the current call works, such that it works for the k amount of free variables in the input E. So, the lst-result stored
+;               all k free variables at this point.
 ; Next call:
 ;
 ; Termination:
@@ -256,7 +278,7 @@ lambda-exp2
 ; ITERATIVE
 
 ; SPEC
-;   pre: E -> a list representing a lambda calclus expression. ex: (lambda (y) x) or (lambda (x) (x (lambda (x) x)))
+;   pre: E -> a list representing a lambda calclus expression based on the BNF definition from question 1. ex: (lambda (y) x) or (lambda (x) (x (lambda (x) x)))
 ;   post: result -> a list of unique bounded variables from the input E. ex: (x)
 
 ; CODE
@@ -315,7 +337,7 @@ lambda-exp2
 ; ITERATIVE
 
 ; SPEC
-;   pre: E -> a list representing a lambda calclus expression. ex: (lambda (y) x) or (lambda (x) (x (lambda (x) x)))
+;   pre: E -> a list representing a lambda calclus expression based on the BNF definition from question 1. ex: (lambda (y) x) or (lambda (x) (x (lambda (x) x)))
 ;   post: result -> a list of unique free variables, bounded variables and lambda identifiers from the input E
 
 ; CODE
