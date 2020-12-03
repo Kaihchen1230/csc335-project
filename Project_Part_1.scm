@@ -1,4 +1,3 @@
-
 ;; Towards a Scheme Interpreter for the Lambda Calculus -- Part 1: Syntax
 
 ;; 5 points
@@ -384,4 +383,3 @@ lambda-exp2
 ; Next call:
 ;
 ; Termination:
-

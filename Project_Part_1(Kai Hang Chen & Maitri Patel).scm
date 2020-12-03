@@ -1,4 +1,3 @@
-
 ;; Towards a Scheme Interpreter for the Lambda Calculus -- Part 1: Syntax
 
 ;; 5 points
@@ -131,6 +130,16 @@ test-make-expr
 
 ; ITERATIVE
 
+; DEVELOPMENT
+;   The idea is to cdr down the list, i.e. to go through each element of the list.
+;   If we be more specific, then we will need to append an elemnent to our new list if that elemnent is not in the list.
+;   And to check whether the element is in the list or not, we use the internal auxilliary function
+;   means it returns #t if there is no duplicate.
+;   So after we process the list with all the elements, we will return the list without any duplicates and with the unique free variables.
+
+;   while developing this logic, it seems to make sense so far. Also the induction seems to make sense!
+;   After some HEAVY-THINKING, we are ready to code and test cases. If anything doesn't seem to work, then we will propose changes as we go.
+
 ; SPEC
 ;   pre: E -> a list representing a lambda calclus expression based on the BNF definition from question 1. ex: (lambda (y) x) or (lambda (x) (x (lambda (x) x)))
 ;   post: result -> a list of unique free variables from the input E
@@ -143,26 +152,72 @@ test-make-expr
 ;   pre: l -> a list
 ;   post: result -> a list of unique elements from the input l
 
-(define (remove-duplicates l)
-        (define (helper lst element-so-far)
-          (cond ((null? lst) element-so-far)
-                ((member (car lst) element-so-far) (helper (cdr lst) element-so-far))
-                ;((member (car lst) (cdr lst)) (helper (cdr lst) element-so-far))
-                (else (helper (cdr lst) (append element-so-far (list (car lst)))))
-                )
-          )
-  (helper l `())
-  )
+; is-in?
+; pre-condition: e is an element, lt is a list
+; post-condition: returns #t if e occurs in the lst, #f otherwise
 
-; TEST
-"remove-duplicates `(a b a b c)"
-(remove-duplicates `(a `() b a b c))
+(define (removeDuplicates lst)
+  (define (is-in? e lt)
+    (cond ((null? lt) #f)
+          (else (if (equal? e (car lt))
+                    #t
+                    (is-in? e (cdr lt))))))
+  (define (iter lt result)
+    (cond ((null? lt) result)
+          (else (if (is-in? (car lt) result)
+                    (iter (cdr lt) result)
+                    (iter (cdr lt) (append result (list (car lt))))))))
+  (iter lst '()))
+
+; TEST (all cases passed)
+
+(removeDuplicates '())
+(removeDuplicates '(a))
+(removeDuplicates '(a a))
+(removeDuplicates '(a b a))
+(removeDuplicates '(a a a a a b))
+(removeDuplicates '(c a a a a a))
+(removeDuplicates '(1 2 1 2 2 1 1 3 1 2))
+; NOTE: internal is-in? function has been tested with ALL TEST PASSED
+;(is-in? 'a '())
+;(is-in? 'a '(b))
+;(is-in? 'a '(a b c d))
+;(is-in? 'a '(b d a d))
+;(is-in? 'a '(b fd a))
+;(is-in? '1 '(2 4 412 a 3))
+
+
+; Now we assume that the helper function works as our pre-condition is satisfied each time we have called it. Therefore, it should return the post condition.
+
 
 ; GUESS-INVATIANT TEST/PROOF for remove-duplicates
 ;
 ; Guess-invariant: lst-all-unique-elements = (car lst) + lst-result + remove-duplicates(lst-remaining) if (car lst) not in lst-result
 ;
-;                  in the program: lst-result = element-so-far
+;                  in the program: lst-result = result
+
+; Exit test: The program will halt if we have no elements.
+
+; therefore, removeDuplicates(LST) = (append result removeDuplicates(lt))
+; ->
+; removeDuplicates(LST) = (append result '()) = result
+; We got LST as the result with all the duplicates removed.
+
+; Initial test: On the first call, lt = LST, and result = '()
+; removeDuplicate(LST) = (append result removeDuplicate(lt))
+; ->
+; removeDuplicate(LST) = (append '() removeDuplicate(lt))
+; = removeDuplicate(lst)
+; We will start processing the elements after this.
+
+; Current+next Test:
+; Current Call: On the current call, removeDuplicate(LST) = (append result removeDuplicate(lt))
+; Next Call: On the next call, we see if (car lt) is in result and if it is, we don't append it to result, else append to result.
+; therefore, removeDuplicate(LST) = (append result removeDuplicate(lt))
+; ->
+; removeDuplicate(LST) = (append result removeDuplicate((cdr lt)))
+; here if we add the element, then our result is (append result (car lt))).
+; Therefore, considering what we got from the last call, this call works.
 ;
 ; Strong-enough?:
 ; When the program halts, we reaches to the end of the l -> `(), meaning the program went throught all the elements in l
@@ -173,7 +228,7 @@ test-make-expr
 ; -> lst-all-unique-elements = lst-result
 ;
 ; Weak-enough?:
-; In the first call we make to helper, the element-so-far = `() -> an empty list
+; In the first call we make to helper, the vars-so-far = `() -> an empty list
 ; and list-remaining is still l, the program hasn't processed any element yet. So, (car lst) is nothing, because the program hasn't started yet.
 ; GI: lst-all-unique-elements = (car lst) + lst-result + remove-duplicates(lst-remaining) if (car lst) not in lst-result
 ; ->
@@ -241,7 +296,7 @@ lambda-exp2
 ;
 ; Guess-invariant: lst-all-free-vars = lst-result + free-vars(body-of-E)
 ;                  where lst-result = lst-result + E, if E is a variable and E is not defined in the parameters
-;                  in the program, lst-result is element-so-far and I am also using args to store the list of occuring parameters in E
+;                  in the program, lst-result is vars-so-far and I am also using args to store the list of occuring parameters in E
 ;
 ; Strong-enough?:
 ; When the program halts, the program reaches to the last variable in the input E,
@@ -256,7 +311,7 @@ lambda-exp2
 ;       ->  lst-all-free-vars = lst-result
 ;
 ; Weak-enough?:
-; In the first call the program make to the helper function, the element-so-far = `() -> an empty list, the parameters = `()
+; In the first call the program make to the helper function, the vars-so-far = `() -> an empty list, the parameters = `()
 ; and body of E is still E.
 ; GI: lst-all-free-vars = lst-result + free-vars(body of E)
 ;      where lst-result = lst-result + E, if E is a variable and E is not defined in the parameters
@@ -266,24 +321,25 @@ lambda-exp2
 ; Preserved?
 ; Current call: Assume that the current call works, such that it works for the k amount of free variables in the input E. So, the lst-result stored
 ;               all k free variables at this point.
-; Next call: In the next call, we already have all k free variables of E from the last call(Current call)
+; Next call: In the next call, we assumed that we have working k amount of free variables in the input E from the last call (current call,
+;            we will need the cases because we process the different structures of lambda differenty.
+;            1) if it is null, we return the empty lst.
+;            
+;            GI: lst-all-free-vars = E + lst-result + free-vars(None)
+;            ->  lst-all-free-vars = lst-result
 ;
-; Next call: In the next call, we already have all the unique elements within the k elements of l from the last call (Current call). Now, we take
-;            the next element through (car l) in the input l and check
-;            1) if it is in the lst-result, then nothing will be added to the lst-result.
-;            Then we take the last element in the input l, since the last element of every list is `(), so the lst-result is the all unique elements in the input l;
-;            GI: lst-all-unique-elements =  (car lst) + lst-result + remove-duplicates(lst-remaining) if (car lst) not in lst-result
-;            ->
-;            lst-all-unique-elements =  None + lst-result + remove-duplicates(`()) since current element already existed in lst-result
-;             ->  lst-all-unique-elements = lst-result
+;           2) For a variable case, we check if it is a member. If it is not a member, then we return an empty list. If lst is a member of
+;              vars-so-far
+;              if it is, return '() parameter
+;              else return lst   (which will append it in the last call
+;            -> GI: lst-all-free-vars = lst-result + free-vars(None)
+;            ->  lst-all-free-vars = lst-result
 ;
-;           2) if it is not in the lst-result, then the it will be added to the lst-result
-;           Then we take the last element in the input l, since the last element of every list is `(), so the lst-result is the all unique elements in the input l;
-;           GI: lst-all-unique-elements =  (car lst) + lst-result + remove-duplicates(lst-remaining) if (car lst) not in lst-result
-;           ->
-;           lst-all-unique-elements = (car lst) + lst-result + remove-duplicates(`()) since current element doesn't existed in lst-result
-;           ->  lst-all-unique-elements = lst-result
-; Termination:
+;           3) If it is a lambda expression, we check if the variable of the lambda is a member or we can do a union on the vars-so-far and then recurse on the body.
+
+
+; Termination:  The program will terminate, if we have the empty list. And everytime we go through the body of the lambda function,
+;               Therefore, assuming that the pre-condition holds, the program must terminate. 
 
 
 
@@ -332,17 +388,51 @@ lambda-exp2
 
 ; GUESS-INVATIANT TEST/PROOF
 ;
-; Guess-invariant:
+; Guess-invariant: lst-all-bounded-vars = lst-result + bounded-vars(body-of-E)
+;                  where lst-result = lst-result + E, if E is a variable and E is not defined in the parameters
+;                  in the program, lst-result is vars-so-far and I am also using args to store the list of occuring parameters in E
 ;
 ; Strong-enough?:
+; When the program halts, the program reaches to the last variable in the input E,
+; then the program checks if last variable is not part of the parameters. If it is, then add to the lst-result, otherwise it won't be added to lst-result.
+; GI: lst-all-bounded-vars = lst-result + bounded-vars(body-of-E)
+;      where lst-result = lst-result + E, if E is a variable and E is not defined in the parameters
+; 1) if E is not part of the parameters:
+;    -> GI: lst-all-bounded-vars = E + lst-result + bounded-vars(None)
+;       ->  lst-all-bounded-vars = lst-result
+; 2) if E is part of the parameters:
+;    -> GI: lst-all-bounded-vars = lst-result + bounded-vars(None)
+;       ->  lst-all-bounded-vars = lst-result
 ;
 ; Weak-enough?:
+; In the first call the program make to the helper function, the element-so-far = `() -> an empty list, the parameters = `()
+; and body of E is still E.
+; GI: lst-all-bounded-vars = lst-result + bounded-vars(body of E)
+;      where lst-result = lst-result + E, if E is a variable and E is defined in the parameters
+; -> lst-all-bounded-vars = `() + bounded-vars(E)
+; -> lst-all-bounded-vars = bounded-vars(E)
 ;
 ; Preserved?
-; Current call:
-; Next call:
+; Current call: Assume that the current call works, such that it works for the k amount of bounded variables in the input E. So, the lst-result stored
+;               all k bounded variables at this point.
+; Next call: In the next call, we assumed that we have working k amount of bounded variables in the input E from the last call (current call,
+;            we will need the cases because we process the different structures of lambda differenty.
+;            1) if it is null, we return the empty lst.
+;            
+;            GI: lst-all-bounded-vars = E + lst-result + bounded-vars(None)
+;            ->  lst-all-bounded-vars = lst-result
 ;
-; Termination:
+;           2) For a variable case, we check if it is a member of the parameter. If it is not a member, then we return an vars-so-far. If lst is a member,
+;              we add the variable to vars-so-far
+;               GI: lst-all-bounded-vars = E + lst-result + bounded-vars(None)
+;            ->  lst-all-bounded-vars = vars-so-far + bounded-var 
+;            
+;
+;           3) If it is a lambda expression, we check if the variable of the lambda is a member or we can do a union on the vars-so-far and then recurse on the body.
+
+
+; Termination:  The program will terminate, if we have the empty list. And everytime we go through the body of the lambda function,
+;               Therefore, assuming that the pre-condition holds, the program must terminate. 
 
 
 ;; 3.  Define a function all-ids which returns the set of all symbols -- free or bound variables,
@@ -388,18 +478,43 @@ lambda-exp2
 
 ; GUESS-INVATIANT TEST/PROOF
 ;
-; Guess-invariant: 
+; Guess-invariant: lst-of-all-ids = lst-result + all-ids(body-of-E)
+;                  where lst-result = lst-result + E, if E is a variable
+;                  in the program, lst-result is id-so-far
 ;
-; Guess-invariant: lst-all-free-vars = lst-result + free-vars(body-of-E)
-;                  where lst-result = lst-result + E, if E is a variable and E is not defined in the parameters
-;                  in the program, lst-result is element-so-far and I am also using args to store the list of occuring parameters in E
 ; Strong-enough?:
+; When the program halts, the program reaches to the last variable in the input E,
+; then the program will add it to the lst-result.
+; GI: lst-of-all-ids = lst-result + all-ids(body-of-E)
+;      where lst-result = lst-result + E if E is a variable
+; -> lst-of-all-ids = lst-result + E
+; -> lst-of-all-ids = lst-result 
+;            
 ;
 ; Weak-enough?:
+; In the first call the program make to the helper function, the id-so-far = `() -> an empty list  and body of E is still E.
+; GI: lst-of-all-ids = lst-result + all-ids(body of E)
+;      where lst-result = lst-result + E, if E is a variable
+; -> lst-of-all-ids = `() + all-ids(E)
+; -> lst-of-all-ids = all-ids(E)
 ;
 ; Preserved?
-; Current call:
-; Next call:
+; Current call: Assume that the current call works, such that it works for the k amount of all-ids in the input E. So, the lst-result stored
+;               all k ids.
+; Next call: In the next call, we assumed that we have working k amount of all ids in the input E from the last call (current call,
+;            we will need the cases because we process the different structures of lambda differenty.
+;            1) if it is null, we return the empty lst.
+;            
+;            GI: lst-of-all-ids = E + lst-result + all-ids(None)
+;            ->  lst-of-all-ids = lst-result
 ;
-; Termination:
+;           2) For a variable case, we add it to the lst-result
+;               GI: lst-of-all-ids = E + lst-result + all-ids(None)
+;            ->  lst-of-all-ids = lst-result + all-ids(None)
+;            
+;
+;           3) If it is a lambda expression, we add the variable section to the lst-result
 
+
+; Termination:  The program will terminate, if we have the empty list. And everytime we go through the body of the lambda function,
+;               Therefore, assuming that the pre-condition holds, the program must terminate. 

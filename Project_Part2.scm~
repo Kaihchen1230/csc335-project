@@ -60,12 +60,6 @@
             (else (iter (+ n 1))))))
   (iter 0))
 
-"use string-symbol"
-(string->symbol "display")
-"use symbol->string"
-(symbol->string `aaa)
-"use string-append"
-(string-append "" "12")
 
 ;; Here string->symbol, string-append and number->string are Scheme primitives; you can implement
 ;; the function element-of yourself.
